@@ -1,0 +1,358 @@
+:root {
+  color-scheme: light;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  --background: #f4efe8;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-strong: #ffffff;
+  --text: #1d1b19;
+  --muted: #6f655b;
+  --primary: #e86f51;
+  --primary-deep: #b9492c;
+  --secondary: #1f4a6e;
+  --secondary-soft: #e2ecf6;
+  --danger: #b8323c;
+  --danger-soft: #fde7e8;
+  --success: #17644e;
+  --success-soft: #dcf4eb;
+  --shadow: 0 18px 40px rgba(49, 42, 35, 0.12);
+  background:
+    radial-gradient(circle at top left, rgba(255, 189, 119, 0.35), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(104, 167, 221, 0.22), transparent 28%),
+    var(--background);
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+.hero-copy {
+  padding: 24px 28px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 248, 240, 0.96), rgba(255, 255, 255, 0.88));
+  box-shadow: var(--shadow);
+  animation: fadeUp 0.5s ease;
+}
+
+.hero-copy h1 {
+  margin: 10px 0 14px;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+  max-width: 12ch;
+}
+
+.hero-text {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.hero-stats {
+  display: grid;
+  gap: 14px;
+}
+
+.panel {
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  animation: fadeUp 0.65s ease;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.panel-heading h2 {
+  margin: 6px 0 0;
+  font-size: 1.45rem;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--surface-strong);
+}
+
+.stat-label,
+.helper-text,
+.empty-state p {
+  color: var(--muted);
+}
+
+.stat-card strong {
+  font-size: 1.35rem;
+}
+
+.status-banner {
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-weight: 600;
+}
+
+.success-banner {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.error-banner {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.student-form {
+  display: grid;
+  gap: 16px;
+}
+
+.student-form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.student-form input,
+.student-form select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(111, 101, 91, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.student-form input:focus,
+.student-form select:focus {
+  outline: none;
+  border-color: rgba(232, 111, 81, 0.75);
+  transform: translateY(-1px);
+}
+
+.form-actions,
+.table-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.primary-button,
+.secondary-button,
+.danger-button {
+  border: none;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-weight: 700;
+  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-button {
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+  box-shadow: 0 10px 24px rgba(232, 111, 81, 0.28);
+}
+
+.secondary-button {
+  background: var(--secondary-soft);
+  color: var(--secondary);
+}
+
+.danger-button {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.danger-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+.student-count {
+  min-width: 84px;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(31, 74, 110, 0.08);
+  color: var(--secondary);
+  font-weight: 700;
+}
+
+.empty-state {
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px dashed rgba(31, 74, 110, 0.25);
+  background: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
+.empty-state h3 {
+  margin-top: 0;
+}
+
+.table-shell {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 14px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(111, 101, 91, 0.14);
+  vertical-align: middle;
+}
+
+th {
+  font-size: 0.88rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.grade-pill {
+  display: inline-flex;
+  min-width: 42px;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.grade-a {
+  background: #dcf7eb;
+  color: #10603f;
+}
+
+.grade-b {
+  background: #e2ecf6;
+  color: #1f4a6e;
+}
+
+.grade-c {
+  background: #fff1d7;
+  color: #855d14;
+}
+
+.grade-d,
+.grade-f,
+.grade-na {
+  background: #fde7e8;
+  color: #b8323c;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 960px) {
+  .hero,
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy h1 {
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 18px 14px 28px;
+  }
+
+  .panel,
+  .hero-copy {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .table-actions,
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .danger-button {
+    width: 100%;
+  }
+}
