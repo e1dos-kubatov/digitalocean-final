@@ -1,24 +1,32 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
-    ...options
-  });
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      },
+      ...options
+    });
+  } catch (error) {
+    throw new Error(
+      "Cannot reach the backend API right now. Make sure Spring Boot is running on http://localhost:5000."
+    );
+  }
 
   if (!response.ok) {
     let message = "Something went wrong while calling the API.";
+    const responseText = await response.text();
 
-    try {
-      const errorBody = await response.json();
-      message = errorBody.message || message;
-    } catch (error) {
-      const fallbackMessage = await response.text();
-      if (fallbackMessage) {
-        message = fallbackMessage;
+    if (responseText) {
+      try {
+        const errorBody = JSON.parse(responseText);
+        message = errorBody.message || message;
+      } catch (error) {
+        message = responseText;
       }
     }
 
