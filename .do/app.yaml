@@ -1,0 +1,96 @@
+# Ready-to-import App Platform spec for this monorepo.
+# If you want to deploy this branch before merging to `main`,
+# change every `github.branch` value below to your pushed branch name.
+# Change `region` if you want a different App Platform region.
+
+name: student-tracker-app
+region: fra
+features:
+  - buildpack-stack=ubuntu-22
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /api
+      component:
+        name: backend
+        preserve_path_prefix: true
+    - match:
+        path:
+          prefix: /
+      component:
+        name: frontend
+static_sites:
+  - name: frontend
+    environment_slug: node-js
+    github:
+      repo: e1dos-kubatov/digitalocean-final
+      branch: main
+      deploy_on_push: true
+    source_dir: frontend
+    build_command: npm run build
+    output_dir: dist
+    catchall_document: index.html
+    envs:
+      - key: VITE_API_URL
+        value: /api
+        scope: BUILD_TIME
+        type: GENERAL
+services:
+  - name: backend
+    github:
+      repo: e1dos-kubatov/digitalocean-final
+      branch: main
+      deploy_on_push: true
+    source_dir: backend
+    dockerfile_path: backend/Dockerfile
+    http_port: 5000
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 30
+      period_seconds: 10
+      timeout_seconds: 5
+      failure_threshold: 6
+    envs:
+      - key: SERVER_PORT
+        value: "5000"
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPRING_DATASOURCE_URL
+        value: ${student-db.JDBC_DATABASE_URL}
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPRING_DATASOURCE_USERNAME
+        value: ${student-db.USERNAME}
+        scope: RUN_TIME
+        type: GENERAL
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: ${student-db.PASSWORD}
+        scope: RUN_TIME
+        type: GENERAL
+      - key: APP_CORS_ALLOWED_ORIGINS
+        value: ${APP_URL}
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JPA_DDL_AUTO
+        value: update
+        scope: RUN_TIME
+        type: GENERAL
+      - key: JPA_SHOW_SQL
+        value: "false"
+        scope: RUN_TIME
+        type: GENERAL
+databases:
+  - name: student-db
+    engine: PG
+    version: "16"
+    production: false
