@@ -109,7 +109,9 @@ jobs:
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Deploy staging stack on the server
+        id: staging-deploy
         if: steps.staging-config.outputs.ready == 'true'
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ env.DEPLOY_HOST }}
@@ -129,6 +131,10 @@ jobs:
             git checkout "$BRANCH" || git checkout -b "$BRANCH" "origin/$BRANCH"
             git pull --ff-only origin "$BRANCH"
             bash .github/scripts/deploy-remote.sh "$COMPOSE_FILE" "$PROJECT_DIR"
+
+      - name: Note failed staging deploy
+        if: always() && steps.staging-config.outputs.ready == 'true' && steps.staging-deploy.outcome != 'success'
+        run: echo "::warning::Staging deploy did not complete successfully. Review the 'Deploy staging stack on the server' step logs for the remote error details."
 
       - name: Note skipped staging deploy
         if: steps.staging-config.outputs.ready != 'true'
@@ -169,7 +175,9 @@ jobs:
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Deploy production stack on the server
+        id: production-deploy
         if: steps.production-config.outputs.ready == 'true'
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ env.DEPLOY_HOST }}
@@ -189,6 +197,10 @@ jobs:
             git checkout "$BRANCH" || git checkout -b "$BRANCH" "origin/$BRANCH"
             git pull --ff-only origin "$BRANCH"
             bash .github/scripts/deploy-remote.sh "$COMPOSE_FILE" "$PROJECT_DIR"
+
+      - name: Note failed production deploy
+        if: always() && steps.production-config.outputs.ready == 'true' && steps.production-deploy.outcome != 'success'
+        run: echo "::warning::Production deploy did not complete successfully. Review the 'Deploy production stack on the server' step logs for the remote error details."
 
       - name: Note skipped production deploy
         if: steps.production-config.outputs.ready != 'true'
