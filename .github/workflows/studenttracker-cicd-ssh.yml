@@ -95,17 +95,21 @@ jobs:
           test -f .github/scripts/deploy-remote.sh
           test -f docker-compose.staging.yml
 
-      - name: Validate staging deployment secrets
+      - name: Resolve staging deployment config
+        id: staging-config
         run: |
           missing=()
           [ -n "$DEPLOY_HOST" ] || missing+=("STAGING_SERVER_IP or HOST (secret or variable)")
           [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
-            exit 1
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping staging deploy because configuration is missing: ${missing[*]}"
+            exit 0
           fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Deploy staging stack on the server
+        if: steps.staging-config.outputs.ready == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ env.DEPLOY_HOST }}
@@ -125,6 +129,10 @@ jobs:
             git checkout "$BRANCH" || git checkout -b "$BRANCH" "origin/$BRANCH"
             git pull --ff-only origin "$BRANCH"
             bash .github/scripts/deploy-remote.sh "$COMPOSE_FILE" "$PROJECT_DIR"
+
+      - name: Note skipped staging deploy
+        if: steps.staging-config.outputs.ready != 'true'
+        run: echo "Staging deploy was skipped because SSH deployment configuration is not set for this repository."
 
   deploy-production:
     name: Deploy Production
@@ -147,17 +155,21 @@ jobs:
           test -f .github/scripts/deploy-remote.sh
           test -f docker-compose.prod.yml
 
-      - name: Validate production deployment secrets
+      - name: Resolve production deployment config
+        id: production-config
         run: |
           missing=()
           [ -n "$DEPLOY_HOST" ] || missing+=("PROD_SERVER_IP or HOST (secret or variable)")
           [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
-            exit 1
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping production deploy because configuration is missing: ${missing[*]}"
+            exit 0
           fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Deploy production stack on the server
+        if: steps.production-config.outputs.ready == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ env.DEPLOY_HOST }}
@@ -177,3 +189,7 @@ jobs:
             git checkout "$BRANCH" || git checkout -b "$BRANCH" "origin/$BRANCH"
             git pull --ff-only origin "$BRANCH"
             bash .github/scripts/deploy-remote.sh "$COMPOSE_FILE" "$PROJECT_DIR"
+
+      - name: Note skipped production deploy
+        if: steps.production-config.outputs.ready != 'true'
+        run: echo "Production deploy was skipped because SSH deployment configuration is not set for this repository."

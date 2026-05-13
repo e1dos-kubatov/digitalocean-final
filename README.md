@@ -273,6 +273,7 @@ How the workflow behaves:
 - Push to `develop` runs backend tests and frontend build, SSHs into the staging server, updates `/root/StudentTracker`, and runs `docker compose -f docker-compose.staging.yml up -d --build`
 - Push to `main` runs backend tests and frontend build, SSHs into the production server, updates `/root/StudentTracker`, and runs `docker compose -f docker-compose.prod.yml up -d --build`
 - The remote deploy script validates the server path, required files, Docker/Compose availability, and the backend health endpoint before the job is marked successful
+- If SSH deployment settings are missing, the deploy step is skipped with a warning instead of failing the entire workflow
 
 ## 13. Required Screenshots For The Lab Report
 
