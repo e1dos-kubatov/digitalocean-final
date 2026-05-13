@@ -1,4 +1,4 @@
-name: StudentTracker CI/CD
+name: StudentTracker CI/CD SSH Deploy
 
 on:
   pull_request:
@@ -17,6 +17,9 @@ concurrency:
 
 permissions:
   contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   backend-ci:
@@ -79,6 +82,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate staging deployment secrets
+        env:
+          STAGING_SERVER_IP: ${{ secrets.STAGING_SERVER_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          missing=()
+          for secret_name in STAGING_SERVER_IP SSH_PRIVATE_KEY; do
+            if [ -z "${!secret_name}" ]; then
+              missing+=("$secret_name")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
+            exit 1
+          fi
+
       - name: Deploy staging stack on the server
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -110,6 +129,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate production deployment secrets
+        env:
+          PROD_SERVER_IP: ${{ secrets.PROD_SERVER_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          missing=()
+          for secret_name in PROD_SERVER_IP SSH_PRIVATE_KEY; do
+            if [ -z "${!secret_name}" ]; then
+              missing+=("$secret_name")
+            fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
+            exit 1
+          fi
 
       - name: Deploy production stack on the server
         uses: appleboy/ssh-action@v1.2.0
