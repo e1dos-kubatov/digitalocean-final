@@ -19,8 +19,8 @@ services:
       retries: 5
 
   backend:
-    image: ${DOCKERHUB_USERNAME}/student-tracker-backend:staging
-    pull_policy: always
+    build:
+      context: ./backend
     restart: unless-stopped
     env_file:
       - .env
@@ -42,9 +42,13 @@ services:
       - "${BACKEND_PORT}:5000"
 
   frontend:
-    image: ${DOCKERHUB_USERNAME}/student-tracker-frontend:staging
-    pull_policy: always
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
     restart: unless-stopped
+    environment:
+      FRONTEND_API_PROXY_TARGET: http://backend:5000
     depends_on:
       - backend
     ports:
