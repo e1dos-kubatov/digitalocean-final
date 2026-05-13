@@ -84,7 +84,8 @@ jobs:
     env:
       DEPLOY_HOST: ${{ secrets.STAGING_SERVER_IP != '' && secrets.STAGING_SERVER_IP || vars.STAGING_SERVER_IP != '' && vars.STAGING_SERVER_IP || secrets.HOST != '' && secrets.HOST || vars.HOST }}
       DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || vars.SSH_USERNAME != '' && vars.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || vars.USERNAME != '' && vars.USERNAME || 'root' }}
-      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || vars.SSH_PRIVATE_KEY != '' && vars.SSH_PRIVATE_KEY || secrets.SSH_KEY != '' && secrets.SSH_KEY || vars.SSH_KEY }}
+      DEPLOY_SSH_KEY_RAW: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || vars.SSH_PRIVATE_KEY != '' && vars.SSH_PRIVATE_KEY || secrets.SSH_KEY != '' && secrets.SSH_KEY || vars.SSH_KEY }}
+      DEPLOY_SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE != '' && secrets.SSH_PASSPHRASE || vars.SSH_PASSPHRASE != '' && vars.SSH_PASSPHRASE || secrets.PASSPHRASE != '' && secrets.PASSPHRASE || vars.PASSPHRASE }}
 
     steps:
       - name: Checkout repository
@@ -100,7 +101,7 @@ jobs:
         run: |
           missing=()
           [ -n "$DEPLOY_HOST" ] || missing+=("STAGING_SERVER_IP or HOST (secret or variable)")
-          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
+          [ -n "$DEPLOY_SSH_KEY_RAW" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Skipping staging deploy because configuration is missing: ${missing[*]}"
@@ -108,15 +109,39 @@ jobs:
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare staging SSH key
+        id: staging-key
+        if: steps.staging-config.outputs.ready == 'true'
+        run: |
+          key_file="$RUNNER_TEMP/staging-deploy.key"
+          if printf '%s' "$DEPLOY_SSH_KEY_RAW" | grep -q "BEGIN .*PRIVATE KEY"; then
+            printf '%s' "$DEPLOY_SSH_KEY_RAW" | perl -0pe 's/\r\n/\n/g; s/\\n/\n/g' > "$key_file"
+          elif printf '%s' "$DEPLOY_SSH_KEY_RAW" | base64 --decode > "$key_file" 2>/dev/null; then
+            perl -0pi -e 's/\r\n/\n/g' "$key_file"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping staging deploy because the SSH private key is not valid text. Use a full private key, a single-line value with \\n escapes, or base64-encoded key text."
+            exit 0
+          fi
+          chmod 600 "$key_file"
+          if ! ssh-keygen -y -f "$key_file" >/dev/null 2>&1; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping staging deploy because the SSH private key could not be parsed. Check that the stored key is the private key and that it is not truncated."
+            exit 0
+          fi
+          echo "path=$key_file" >> "$GITHUB_OUTPUT"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy staging stack on the server
         id: staging-deploy
-        if: steps.staging-config.outputs.ready == 'true'
+        if: steps.staging-config.outputs.ready == 'true' && steps.staging-key.outputs.ready == 'true'
         continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ env.DEPLOY_HOST }}
           username: ${{ env.DEPLOY_USERNAME }}
-          key: ${{ env.DEPLOY_SSH_KEY }}
+          key_path: ${{ steps.staging-key.outputs.path }}
+          passphrase: ${{ env.DEPLOY_SSH_PASSPHRASE }}
           script: |
             set -euo pipefail
             PROJECT_DIR=/root/StudentTracker
@@ -133,8 +158,12 @@ jobs:
             bash .github/scripts/deploy-remote.sh "$COMPOSE_FILE" "$PROJECT_DIR"
 
       - name: Note failed staging deploy
-        if: always() && steps.staging-config.outputs.ready == 'true' && steps.staging-deploy.outcome != 'success'
+        if: always() && steps.staging-config.outputs.ready == 'true' && steps.staging-key.outputs.ready == 'true' && steps.staging-deploy.outcome != 'success'
         run: echo "::warning::Staging deploy did not complete successfully. Review the 'Deploy staging stack on the server' step logs for the remote error details."
+
+      - name: Note skipped staging deploy because of SSH key format
+        if: steps.staging-config.outputs.ready == 'true' && steps.staging-key.outputs.ready != 'true'
+        run: echo "Staging deploy was skipped because the configured SSH private key could not be normalized into a valid key file."
 
       - name: Note skipped staging deploy
         if: steps.staging-config.outputs.ready != 'true'
@@ -150,7 +179,8 @@ jobs:
     env:
       DEPLOY_HOST: ${{ secrets.PROD_SERVER_IP != '' && secrets.PROD_SERVER_IP || vars.PROD_SERVER_IP != '' && vars.PROD_SERVER_IP || secrets.HOST != '' && secrets.HOST || vars.HOST }}
       DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || vars.SSH_USERNAME != '' && vars.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || vars.USERNAME != '' && vars.USERNAME || 'root' }}
-      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || vars.SSH_PRIVATE_KEY != '' && vars.SSH_PRIVATE_KEY || secrets.SSH_KEY != '' && secrets.SSH_KEY || vars.SSH_KEY }}
+      DEPLOY_SSH_KEY_RAW: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || vars.SSH_PRIVATE_KEY != '' && vars.SSH_PRIVATE_KEY || secrets.SSH_KEY != '' && secrets.SSH_KEY || vars.SSH_KEY }}
+      DEPLOY_SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE != '' && secrets.SSH_PASSPHRASE || vars.SSH_PASSPHRASE != '' && vars.SSH_PASSPHRASE || secrets.PASSPHRASE != '' && secrets.PASSPHRASE || vars.PASSPHRASE }}
 
     steps:
       - name: Checkout repository
@@ -166,7 +196,7 @@ jobs:
         run: |
           missing=()
           [ -n "$DEPLOY_HOST" ] || missing+=("PROD_SERVER_IP or HOST (secret or variable)")
-          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
+          [ -n "$DEPLOY_SSH_KEY_RAW" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Skipping production deploy because configuration is missing: ${missing[*]}"
@@ -174,15 +204,39 @@ jobs:
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare production SSH key
+        id: production-key
+        if: steps.production-config.outputs.ready == 'true'
+        run: |
+          key_file="$RUNNER_TEMP/production-deploy.key"
+          if printf '%s' "$DEPLOY_SSH_KEY_RAW" | grep -q "BEGIN .*PRIVATE KEY"; then
+            printf '%s' "$DEPLOY_SSH_KEY_RAW" | perl -0pe 's/\r\n/\n/g; s/\\n/\n/g' > "$key_file"
+          elif printf '%s' "$DEPLOY_SSH_KEY_RAW" | base64 --decode > "$key_file" 2>/dev/null; then
+            perl -0pi -e 's/\r\n/\n/g' "$key_file"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping production deploy because the SSH private key is not valid text. Use a full private key, a single-line value with \\n escapes, or base64-encoded key text."
+            exit 0
+          fi
+          chmod 600 "$key_file"
+          if ! ssh-keygen -y -f "$key_file" >/dev/null 2>&1; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping production deploy because the SSH private key could not be parsed. Check that the stored key is the private key and that it is not truncated."
+            exit 0
+          fi
+          echo "path=$key_file" >> "$GITHUB_OUTPUT"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy production stack on the server
         id: production-deploy
-        if: steps.production-config.outputs.ready == 'true'
+        if: steps.production-config.outputs.ready == 'true' && steps.production-key.outputs.ready == 'true'
         continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ env.DEPLOY_HOST }}
           username: ${{ env.DEPLOY_USERNAME }}
-          key: ${{ env.DEPLOY_SSH_KEY }}
+          key_path: ${{ steps.production-key.outputs.path }}
+          passphrase: ${{ env.DEPLOY_SSH_PASSPHRASE }}
           script: |
             set -euo pipefail
             PROJECT_DIR=/root/StudentTracker
@@ -199,8 +253,12 @@ jobs:
             bash .github/scripts/deploy-remote.sh "$COMPOSE_FILE" "$PROJECT_DIR"
 
       - name: Note failed production deploy
-        if: always() && steps.production-config.outputs.ready == 'true' && steps.production-deploy.outcome != 'success'
+        if: always() && steps.production-config.outputs.ready == 'true' && steps.production-key.outputs.ready == 'true' && steps.production-deploy.outcome != 'success'
         run: echo "::warning::Production deploy did not complete successfully. Review the 'Deploy production stack on the server' step logs for the remote error details."
+
+      - name: Note skipped production deploy because of SSH key format
+        if: steps.production-config.outputs.ready == 'true' && steps.production-key.outputs.ready != 'true'
+        run: echo "Production deploy was skipped because the configured SSH private key could not be normalized into a valid key file."
 
       - name: Note skipped production deploy
         if: steps.production-config.outputs.ready != 'true'
