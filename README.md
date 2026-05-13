@@ -261,6 +261,12 @@ Add these GitHub Secrets in the repository settings:
 - `PROD_SERVER_IP`
 - `SSH_PRIVATE_KEY`
 
+Accepted fallback names:
+
+- `HOST` can be used instead of `STAGING_SERVER_IP` or `PROD_SERVER_IP`
+- `SSH_KEY` can be used instead of `SSH_PRIVATE_KEY`
+- `SSH_USERNAME` or `USERNAME` can be used if the server user is not `root`
+
 How the workflow behaves:
 
 - Push to `develop` runs backend tests and frontend build, SSHs into the staging server, updates `/root/StudentTracker`, and runs `docker compose -f docker-compose.staging.yml up -d --build`

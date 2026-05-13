@@ -81,6 +81,10 @@ jobs:
       - backend-ci
       - frontend-ci
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.STAGING_SERVER_IP != '' && secrets.STAGING_SERVER_IP || secrets.HOST }}
+      DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || 'root' }}
+      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || secrets.SSH_KEY }}
 
     steps:
       - name: Checkout repository
@@ -92,16 +96,10 @@ jobs:
           test -f docker-compose.staging.yml
 
       - name: Validate staging deployment secrets
-        env:
-          STAGING_SERVER_IP: ${{ secrets.STAGING_SERVER_IP }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           missing=()
-          for secret_name in STAGING_SERVER_IP SSH_PRIVATE_KEY; do
-            if [ -z "${!secret_name}" ]; then
-              missing+=("$secret_name")
-            fi
-          done
+          [ -n "$DEPLOY_HOST" ] || missing+=("STAGING_SERVER_IP or HOST")
+          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
             exit 1
@@ -110,9 +108,9 @@ jobs:
       - name: Deploy staging stack on the server
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.STAGING_SERVER_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USERNAME }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
             PROJECT_DIR=/root/StudentTracker
@@ -135,6 +133,10 @@ jobs:
       - backend-ci
       - frontend-ci
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.PROD_SERVER_IP != '' && secrets.PROD_SERVER_IP || secrets.HOST }}
+      DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || 'root' }}
+      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || secrets.SSH_KEY }}
 
     steps:
       - name: Checkout repository
@@ -146,16 +148,10 @@ jobs:
           test -f docker-compose.prod.yml
 
       - name: Validate production deployment secrets
-        env:
-          PROD_SERVER_IP: ${{ secrets.PROD_SERVER_IP }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           missing=()
-          for secret_name in PROD_SERVER_IP SSH_PRIVATE_KEY; do
-            if [ -z "${!secret_name}" ]; then
-              missing+=("$secret_name")
-            fi
-          done
+          [ -n "$DEPLOY_HOST" ] || missing+=("PROD_SERVER_IP or HOST")
+          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
             exit 1
@@ -164,9 +160,9 @@ jobs:
       - name: Deploy production stack on the server
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.PROD_SERVER_IP }}
-          username: root
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USERNAME }}
+          key: ${{ env.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
             PROJECT_DIR=/root/StudentTracker
