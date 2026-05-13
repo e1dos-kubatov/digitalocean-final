@@ -82,9 +82,9 @@ jobs:
       - frontend-ci
     runs-on: ubuntu-latest
     env:
-      DEPLOY_HOST: ${{ secrets.STAGING_SERVER_IP != '' && secrets.STAGING_SERVER_IP || secrets.HOST }}
-      DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || 'root' }}
-      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || secrets.SSH_KEY }}
+      DEPLOY_HOST: ${{ secrets.STAGING_SERVER_IP != '' && secrets.STAGING_SERVER_IP || vars.STAGING_SERVER_IP != '' && vars.STAGING_SERVER_IP || secrets.HOST != '' && secrets.HOST || vars.HOST }}
+      DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || vars.SSH_USERNAME != '' && vars.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || vars.USERNAME != '' && vars.USERNAME || 'root' }}
+      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || vars.SSH_PRIVATE_KEY != '' && vars.SSH_PRIVATE_KEY || secrets.SSH_KEY != '' && secrets.SSH_KEY || vars.SSH_KEY }}
 
     steps:
       - name: Checkout repository
@@ -98,8 +98,8 @@ jobs:
       - name: Validate staging deployment secrets
         run: |
           missing=()
-          [ -n "$DEPLOY_HOST" ] || missing+=("STAGING_SERVER_IP or HOST")
-          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY")
+          [ -n "$DEPLOY_HOST" ] || missing+=("STAGING_SERVER_IP or HOST (secret or variable)")
+          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
             exit 1
@@ -134,9 +134,9 @@ jobs:
       - frontend-ci
     runs-on: ubuntu-latest
     env:
-      DEPLOY_HOST: ${{ secrets.PROD_SERVER_IP != '' && secrets.PROD_SERVER_IP || secrets.HOST }}
-      DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || 'root' }}
-      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || secrets.SSH_KEY }}
+      DEPLOY_HOST: ${{ secrets.PROD_SERVER_IP != '' && secrets.PROD_SERVER_IP || vars.PROD_SERVER_IP != '' && vars.PROD_SERVER_IP || secrets.HOST != '' && secrets.HOST || vars.HOST }}
+      DEPLOY_USERNAME: ${{ secrets.SSH_USERNAME != '' && secrets.SSH_USERNAME || vars.SSH_USERNAME != '' && vars.SSH_USERNAME || secrets.USERNAME != '' && secrets.USERNAME || vars.USERNAME != '' && vars.USERNAME || 'root' }}
+      DEPLOY_SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY != '' && secrets.SSH_PRIVATE_KEY || vars.SSH_PRIVATE_KEY != '' && vars.SSH_PRIVATE_KEY || secrets.SSH_KEY != '' && secrets.SSH_KEY || vars.SSH_KEY }}
 
     steps:
       - name: Checkout repository
@@ -150,8 +150,8 @@ jobs:
       - name: Validate production deployment secrets
         run: |
           missing=()
-          [ -n "$DEPLOY_HOST" ] || missing+=("PROD_SERVER_IP or HOST")
-          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY")
+          [ -n "$DEPLOY_HOST" ] || missing+=("PROD_SERVER_IP or HOST (secret or variable)")
+          [ -n "$DEPLOY_SSH_KEY" ] || missing+=("SSH_PRIVATE_KEY or SSH_KEY (secret or variable)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required GitHub Actions secrets: ${missing[*]}"
             exit 1

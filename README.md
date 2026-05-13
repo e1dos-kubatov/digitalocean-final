@@ -266,6 +266,7 @@ Accepted fallback names:
 - `HOST` can be used instead of `STAGING_SERVER_IP` or `PROD_SERVER_IP`
 - `SSH_KEY` can be used instead of `SSH_PRIVATE_KEY`
 - `SSH_USERNAME` or `USERNAME` can be used if the server user is not `root`
+- The workflow accepts these names from either GitHub `Secrets` or GitHub `Variables`
 
 How the workflow behaves:
 
