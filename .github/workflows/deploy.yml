@@ -1,18 +1,78 @@
-name: Build and Deploy StudentTracker
+name: StudentTracker CI/CD
 
 on:
+  pull_request:
+    branches:
+      - develop
+      - main
   push:
     branches:
       - develop
       - main
+  workflow_dispatch:
 
 concurrency:
-  group: studenttracker-${{ github.ref }}
+  group: studenttracker-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
+  backend-ci:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        working-directory: backend
+        run: chmod +x mvnw
+
+      - name: Run backend tests
+        working-directory: backend
+        run: ./mvnw -B test
+
+  frontend-ci:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_URL: /api
+        run: npm run build
+
   deploy-staging:
-    if: github.ref == 'refs/heads/develop'
+    name: Deploy Staging
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs:
+      - backend-ci
+      - frontend-ci
     runs-on: ubuntu-latest
 
     steps:
@@ -46,21 +106,35 @@ jobs:
 
       - name: Deploy staging stack on the server
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.STAGING_SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
+            set -e
             cd /root/StudentTracker
             git fetch origin
             git checkout develop || git checkout -b develop origin/develop
-            git pull origin develop
-            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            git pull --ff-only origin develop
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            export DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME"
+            set -a
+            . ./.env
+            set +a
             docker compose --env-file .env -f docker-compose.staging.yml pull
             docker compose --env-file .env -f docker-compose.staging.yml up -d --remove-orphans
+            curl --fail --retry 10 --retry-delay 5 "http://127.0.0.1:${BACKEND_PORT}/api/health"
 
   deploy-production:
-    if: github.ref == 'refs/heads/main'
+    name: Deploy Production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+      - backend-ci
+      - frontend-ci
     runs-on: ubuntu-latest
 
     steps:
@@ -98,15 +172,25 @@ jobs:
 
       - name: Deploy production stack on the server
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.PROD_SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
+            set -e
             cd /root/StudentTracker
             git fetch origin
             git checkout main || git checkout -b main origin/main
-            git pull origin main
-            export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            git pull --ff-only origin main
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            export DOCKERHUB_USERNAME="$DOCKERHUB_USERNAME"
+            set -a
+            . ./.env
+            set +a
             docker compose --env-file .env -f docker-compose.prod.yml pull
             docker compose --env-file .env -f docker-compose.prod.yml up -d --remove-orphans
+            curl --fail --retry 10 --retry-delay 5 "http://127.0.0.1:${BACKEND_PORT}/api/health"

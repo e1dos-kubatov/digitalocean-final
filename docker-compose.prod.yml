@@ -45,6 +45,8 @@ services:
     image: ${DOCKERHUB_USERNAME}/student-tracker-frontend:latest
     pull_policy: always
     restart: unless-stopped
+    environment:
+      FRONTEND_API_PROXY_TARGET: http://backend:5000
     depends_on:
       - backend
     ports:
