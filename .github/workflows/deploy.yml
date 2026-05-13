@@ -81,14 +81,10 @@ jobs:
 
       - name: Deploy staging stack on the server
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.STAGING_SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             set -e
             cd /root/StudentTracker
@@ -117,14 +113,10 @@ jobs:
 
       - name: Deploy production stack on the server
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.PROD_SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             set -e
             cd /root/StudentTracker
