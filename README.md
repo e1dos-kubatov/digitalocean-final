@@ -1,4 +1,4 @@
-# StudentTracke
+# StudentTracker
 
 StudentTracker is a small full-stack student management system built for a DigitalOcean DevOps lab. It includes a Spring Boot 3 REST API, a React + Vite frontend, PostgreSQL, Docker Compose orchestration, Nginx reverse proxying, GitHub Actions CI/CD, backup automation, and optional HTTPS with Let's Encrypt. The application lets users create, view, update, and delete student records without adding authentication or extra complexity. The project is intentionally beginner-friendly so it is easy to run locally, deploy manually on an Ubuntu Droplet, and explain during a lab demonstration.
 
@@ -36,7 +36,7 @@ Nginx routing:
 
 ## 3. Why `.env` Is Needed
 
-The `.env` file keeps database credentials, ports, Docker Hub names, and deployment settings outside the source code. That makes the project safer because real passwords and server-specific values are not hardcoded in Java, React, Docker Compose, or GitHub Actions files. It also makes the same codebase easy to reuse for local development, staging, and production by changing only environment values. The repository includes `.env.example` so you can create your own `.env` quickly while still keeping the real `.env` ignored by Git.
+The `.env` file keeps database credentials, ports, and deployment settings outside the source code. That makes the project safer because real passwords and server-specific values are not hardcoded in Java, React, Docker Compose, or GitHub Actions files. It also makes the same codebase easy to reuse for local development, staging, and production by changing only environment values. The repository includes `.env.example` so you can create your own `.env` quickly while still keeping the real `.env` ignored by Git.
 
 ## 4. Project Structure
 
@@ -54,7 +54,8 @@ StudentTracker/
   .gitignore
   backup.sh
   README.md
-  .github/workflows/deploy.yml
+  .github/workflows/studenttracker-cicd-ssh.yml
+  .github/scripts/deploy-remote.sh
 ```
 
 ## 5. How To Run Locally On Windows 11 With IntelliJ IDEA
@@ -177,8 +178,7 @@ nano .env
 Manual production deployment:
 
 ```bash
-docker compose --env-file .env -f docker-compose.prod.yml pull
-docker compose --env-file .env -f docker-compose.prod.yml up -d
+docker compose --env-file .env -f docker-compose.prod.yml up -d --build
 docker ps
 ```
 
@@ -186,8 +186,7 @@ Manual staging deployment:
 
 ```bash
 git checkout develop
-docker compose --env-file .env -f docker-compose.staging.yml pull
-docker compose --env-file .env -f docker-compose.staging.yml up -d
+docker compose --env-file .env -f docker-compose.staging.yml up -d --build
 docker ps
 ```
 
@@ -251,33 +250,22 @@ The `nginx.https.conf` file redirects HTTP port `80` to HTTPS port `443`.
 ## 11. Multiple Environments
 
 - `docker-compose.yml` is for local development with `build:`
-- `docker-compose.staging.yml` uses Docker Hub images and `SPRING_PROFILES_ACTIVE=staging`
-- `docker-compose.prod.yml` uses Docker Hub images and `SPRING_PROFILES_ACTIVE=prod`
+- `docker-compose.staging.yml` builds the app on the server and uses `SPRING_PROFILES_ACTIVE=staging`
+- `docker-compose.prod.yml` builds the app on the server and uses `SPRING_PROFILES_ACTIVE=prod`
 
-Required image names in production:
-
-- `${DOCKERHUB_USERNAME}/student-tracker-backend:latest`
-- `${DOCKERHUB_USERNAME}/student-tracker-frontend:latest`
-
-## 12. Docker Hub And GitHub Secrets
-
-Create these Docker Hub repositories:
-
-- `DOCKERHUB_USERNAME/student-tracker-backend`
-- `DOCKERHUB_USERNAME/student-tracker-frontend`
+## 12. GitHub Secrets
 
 Add these GitHub Secrets in the repository settings:
 
 - `STAGING_SERVER_IP`
 - `PROD_SERVER_IP`
 - `SSH_PRIVATE_KEY`
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
 
 How the workflow behaves:
 
-- Push to `develop` builds both images, pushes `:staging`, SSHs into the staging server, runs `git pull`, then runs `docker compose pull` and `docker compose -f docker-compose.staging.yml up -d`
-- Push to `main` builds both images, pushes `:latest` and `:prod`, SSHs into the production server, runs `git pull`, then runs `docker compose pull` and `docker compose -f docker-compose.prod.yml up -d`
+- Push to `develop` runs backend tests and frontend build, SSHs into the staging server, updates `/root/StudentTracker`, and runs `docker compose -f docker-compose.staging.yml up -d --build`
+- Push to `main` runs backend tests and frontend build, SSHs into the production server, updates `/root/StudentTracker`, and runs `docker compose -f docker-compose.prod.yml up -d --build`
+- The remote deploy script validates the server path, required files, Docker/Compose availability, and the backend health endpoint before the job is marked successful
 
 ## 13. Required Screenshots For The Lab Report
 
@@ -289,7 +277,6 @@ Take these screenshots after deployment:
 - backup folder with dump files
 - browser with HTTPS lock
 - `.gitignore` showing `.env`
-- Docker Hub repository
 - staging deployment
 - production deployment
 
