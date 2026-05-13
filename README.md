@@ -1,4 +1,4 @@
-# StudentTracker
+# StudentTracke
 
 StudentTracker is a small full-stack student management system built for a DigitalOcean DevOps lab. It includes a Spring Boot 3 REST API, a React + Vite frontend, PostgreSQL, Docker Compose orchestration, Nginx reverse proxying, GitHub Actions CI/CD, backup automation, and optional HTTPS with Let's Encrypt. The application lets users create, view, update, and delete student records without adding authentication or extra complexity. The project is intentionally beginner-friendly so it is easy to run locally, deploy manually on an Ubuntu Droplet, and explain during a lab demonstration.
 
