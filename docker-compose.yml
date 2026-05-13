@@ -47,6 +47,8 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL}
     restart: unless-stopped
+    environment:
+      FRONTEND_API_PROXY_TARGET: http://backend:5000
     depends_on:
       - backend
     ports:
